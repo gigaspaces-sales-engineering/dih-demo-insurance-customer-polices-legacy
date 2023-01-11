@@ -48,7 +48,7 @@ public class CustomerPoliciesService {
         logger.info(msSqlServerProps.getUrl());
     }
 /*
-    **************************** Legacy Naive ****************************
+    **************************** Direct database access ****************************
     Start with the customers collection on Mongo. Find all relevant customers and iterate over them with a cursor
     For each customer, issue a select statment finding all matching policies for this customerId.
 */
