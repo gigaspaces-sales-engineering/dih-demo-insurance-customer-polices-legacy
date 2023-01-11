@@ -47,18 +47,23 @@ public class CustomerPoliciesService {
         logger.info(mongoUrl);
         logger.info(msSqlServerProps.getUrl());
     }
+/*
+    **************************** Legacy Naive ****************************
+    Start with the customers collection on Mongo. Find all relevant customers and iterate over them with a cursor
+    For each customer, issue a select statment finding all matching policies for this customerId.
+*/
 
     public List<Map> customerPolicies(Optional<String> state) throws SQLException {
         List list = new ArrayList();
         try (Connection con = DriverManager.getConnection(msSqlServerProps.getUrl(),
                 msSqlServerProps.getName(), msSqlServerProps.getPassword())) {
             MongoCursor<Document> cursor = fetchCustomers(state);
+            PreparedStatement stmt = con.prepareStatement("select p.policyId, p.policyStartDate, p.policyEndDate," +
+              " pr.productCategory, pr.productName " +
+              "from policy p left join product pr on p.productId=pr.productId where p.customerId = ?");
             while (cursor.hasNext()) {
                 Document doc = cursor.next();
                 logger.debug("Fetching customer email: " + doc.get("email"));
-                PreparedStatement stmt = con.prepareStatement("select p.policyId, p.policyStartDate, p.policyEndDate," +
-                        " pr.productCategory, pr.productName " +
-                        "from policy p left join product pr on p.productId=pr.productId where p.customerId = ?");
                 stmt.setInt(1,(Integer) doc.get("customerId"));
                 ResultSet rs = stmt.executeQuery();
                 while (rs.next()) {
@@ -79,7 +84,13 @@ public class CustomerPoliciesService {
         return list;
     }
 
-
+/*
+    ******************************** Legacy client side join ****************************
+    Fetch all  Policies from the SQL DB and build a hash map with the key of the customerId and a list of policies for this customerId.
+    Find all elevant customers customers on Mongo and for each customer lookup the policies hashMap for this customerId.
+    If exist, add to results records, else skip this customer. 
+    Continue to the next customerId.
+*/
 
     public List<Map> customerPolicies2(Optional<String> state) throws SQLException {
         List<Map> customersList = new ArrayList();
